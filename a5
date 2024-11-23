@@ -1,0 +1,110 @@
+##Paige Brooks
+##pab9@sfu.ca
+##301426363
+import random
+##Constants
+DICE_SCORES = {1: 100, 2: 2, 3: 3, 4: 4, 5: 5, 6: 60}
+SPECIAL_ROLLS = {"4,5,6": "PoCo!", "1,2,3": "Loco!"}
+MAX_ROLLS = 3
+##Functions
+def print_instructions():
+    print("Welcome to PocoLoco!")
+    print("Instructions:")
+    print("1. Roll three dice up to 3 times per turn to get the highest score.")
+    print("2. Special rolls like 'PoCo!' (4,5,6) and 'Loco!' (1,2,3) rank higher than points.")
+    print("3. The lowest scorer gets chips from others, and the first to lose all their chips wins.")
+    print("4. Ties are broken randomly for fairness.\n")
+
+def roll_dice():
+    return [random.randint(1, 6) for _ in range(3)]
+
+def calculate_score(roll):
+    roll_sorted = sorted(roll)
+    roll_str = ','.join(map(str, roll_sorted))
+    if roll_str in SPECIAL_ROLLS:
+        return SPECIAL_ROLLS[roll_str], roll_str
+    elif roll_sorted[0] == roll_sorted[1] == roll_sorted[2]:
+        return f"Three-of-a-kind ({roll_sorted[0]})", roll_str
+    return sum(DICE_SCORES[die] for die in roll), roll_str
+
+def draw_dice(dice):
+    dice_art = {
+        1: [" ----- ", "|     |", "|  o  |", "|     |", " ----- "],
+        2: [" ----- ", "| o   |", "|     |", "|   o |", " ----- "],
+        3: [" ----- ", "| o   |", "|  o  |", "|   o |", " ----- "],
+        4: [" ----- ", "| o o |", "|     |", "| o o |", " ----- "],
+        5: [" ----- ", "| o o |", "|  o  |", "| o o |", " ----- "],
+        6: [" ----- ", "| o o |", "| o o |", "| o o |", " ----- "],
+    }
+    art_lines = [""] * 5
+    for die in dice:
+        for i in range(5):
+            art_lines[i] += dice_art[die][i] + "  "
+    print("\n".join(art_lines))
+
+def take_turn(player, max_rolls, current_high_score):
+    rolls = 0
+    best_score = 0
+    best_roll = []
+    while rolls < max_rolls:
+        rolls += 1
+        roll = roll_dice()
+        draw_dice(roll)
+        score, roll_type = calculate_score(roll)
+        print(f"{player} rolled: {roll} - Score: {score} ({roll_type})")
+        if isinstance(score, int) and score > best_score:
+            best_score = score
+            best_roll = roll
+        elif isinstance(score, str) and roll_type in SPECIAL_ROLLS:
+            best_score = score
+            best_roll = roll
+        if player == "Human":
+            roll_again = input("Roll again? (y/n): ").lower()
+            if roll_again != 'y':
+                break
+    return best_score, best_roll
+
+def distribute_chips(players, scores, chip_counts):
+    lowest_player = min(scores, key=scores.get)
+    highest_score = max(scores.values())
+    if isinstance(highest_score, int):
+        chips_to_give = 1
+    elif "Loco!" in highest_score:
+        chips_to_give = 2
+    elif "Three-of-a-kind" in highest_score:
+        chips_to_give = 3
+    else:
+        chips_to_give = 4
+    for player in players:
+        if player != lowest_player:
+            chip_counts[player] -= chips_to_give
+            chip_counts[lowest_player] += chips_to_give
+    return chip_counts
+##Main Game Loop
+def main():
+    print_instructions()
+    player_name = input("Enter your name: ")
+    starting_chips = int(input("How many chips to start with? "))
+    players = [player_name, "Mo", "Barney", "Marge"]
+    chip_counts = {player: starting_chips for player in players}
+
+    round_num = 1
+    while all(chip_counts[player] > 0 for player in players):
+        print(f"+---------+\n| Round {round_num} |\n+---------+")
+        random.shuffle(players)
+        scores = {}
+        print("Chip counts:", chip_counts)
+        for i, player in enumerate(players):
+            print(f"\n{player}'s turn:")
+            max_rolls = MAX_ROLLS if i == 0 else rolls
+            score, roll = take_turn(player, max_rolls, max(scores.values(), default=0))
+            scores[player] = score
+        chip_counts = distribute_chips(players, scores, chip_counts)
+        round_num += 1
+
+    winner = min(chip_counts, key=chip_counts.get)
+    print(f"\nGame over! {winner} wins!")
+    print("Final chip counts:", chip_counts)
+
+if __name__ == "__main__":
+    main()
